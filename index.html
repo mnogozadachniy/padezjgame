@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Игра-Викторина: Падежи</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f8ff;
+      margin: 0;
+      position: relative;
+    }
+    canvas {
+      border: 2px solid #333;
+      background-color: #e6f7ff;
+    }
+    #popup {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #333;
+      color: white;
+      padding: 15px 30px;
+      font-size: 20px;
+      border-radius: 10px;
+      display: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <div id="popup">Правильно!</div>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const popup = document.getElementById('popup');
+    const circleRadius = 50;
+
+    let questionPair, correctCase, options;
+    let score = 0;
+    let startTime;
+    let timer = 30.0;
+    let gameRunning = true;
+
+    const caseData = [
+      { case: "Именительный", examples: ["Мальчик читает", "Книга лежит"] },
+      { case: "Родительный", examples: ["Ждать друга", "Лишиться работы"] },
+      { case: "Дательный", examples: ["Помогать брату", "Верить другу"] },
+      { case: "Винительный", examples: ["Любить музыку", "Смотреть фильм"] },
+      { case: "Творительный", examples: ["Гордиться победой", "Управлять машиной"] },
+      { case: "Предложный", examples: ["Думать о работе", "Говорить о путешествии"] }
+    ];
+
+    function resetGame() {
+      score = 0;
+      timer = 30.0;
+      gameRunning = true;
+      resetLevel();
+      startTime = Date.now();
+      requestAnimationFrame(updateGame);
+    }
+
+    function resetLevel() {
+      // Генерация пары и правильного падежа
+      const randomCaseIndex = Math.floor(Math.random() * caseData.length);
+      const caseInfo = caseData[randomCaseIndex];
+      correctCase = caseInfo.case;
+      const randomExample = caseInfo.examples[Math.floor(Math.random() * caseInfo.examples.length)];
+      questionPair = randomExample;
+
+      options = generateOptions(correctCase);
+      drawGame();
+    }
+
+    function generateOptions(correct) {
+      const options = [correct];
+      while (options.length < 3) {
+        const randomCase = caseData[Math.floor(Math.random() * caseData.length)].case;
+        if (!options.includes(randomCase)) {
+          options.push(randomCase);
+        }
+      }
+      return options.sort(() => Math.random() - 0.5);
+    }
+
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Пара "существительное + глагол"
+      ctx.fillStyle = '#333';
+      ctx.font = '24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Пара: ${questionPair}`, 200, 160);
+
+      // Таймер
+      ctx.fillStyle = '#000';
+      ctx.font = '18px Arial';
+      ctx.fillText(`Время: ${timer.toFixed(1)} сек`, 200, 50);
+
+      // Отображение вариантов
+      options.forEach((option, index) => {
+        const x = 100 + index * 100;
+        const y = 400;
+
+        ctx.beginPath();
+        ctx.arc(x, y, circleRadius, 0, Math.PI * 2);
+        ctx.fillStyle = '#4682b4';
+        ctx.fill();
+        ctx.closePath();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '18px Arial';
+        ctx.fillText(option, x, y + 7);
+      });
+
+      // Счетчик очков
+      ctx.fillStyle = '#000';
+      ctx.font = '18px Arial';
+      ctx.fillText(`Очки: ${score}`, 200, 580);
+    }
+
+    canvas.addEventListener('touchstart', (event) => {
+      if (!gameRunning) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const touch = event.touches[0];
+      const touchX = touch.clientX - rect.left;
+      const touchY = touch.clientY - rect.top;
+
+      options.forEach((option, index) => {
+        const x = 100 + index * 100;
+        const y = 400;
+
+        const dx = touchX - x;
+        const dy = touchY - y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < circleRadius) {
+          const currentTime = (Date.now() - startTime) / 1000;
+          if (option === correctCase) {
+            const points = currentTime <= 3 ? 20 : 10;
+            score += points;
+            showPopup('Правильно!');
+            setTimeout(resetLevel, 1000);
+          } else {
+            score = Math.max(0, score - 5);
+            flashCanvasRed();
+          }
+        }
+      });
+    });
+
+    function updateGame() {
+      if (!gameRunning) return;
+
+      const currentTime = (Date.now() - startTime) / 1000;
+      timer = 30 - currentTime;
+
+      if (timer <= 0) {
+        timer = 0;
+        gameRunning = false;
+        showPopup(`Игра окончена. Ваш счёт: ${score}`);
+        setTimeout(() => {
+          canvas.addEventListener('touchstart', resetGame, { once: true });
+        }, 1500);
+      }
+
+      drawGame();
+      if (gameRunning) requestAnimationFrame(updateGame);
+    }
+
+    function showPopup(message) {
+      popup.textContent = message;
+      popup.style.display = 'block';
+      setTimeout(() => {
+        popup.style.display = 'none';
+      }, 1000);
+    }
+
+    function flashCanvasRed() {
+      let flashCount = 0;
+      const interval = setInterval(() => {
+        canvas.style.backgroundColor =
+          flashCount % 2 === 0 ? '#ff4d4d' : '#e6f7ff';
+        flashCount++;
+        if (flashCount === 4) {
+          clearInterval(interval);
+          canvas.style.backgroundColor = '#e6f7ff';
+        }
+      }, 150);
+    }
+
+    resetGame();
+  </script>
+</body>
+</html>
