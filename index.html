@@ -46,7 +46,7 @@
     let questionPair, correctCase, options;
     let score = 0;
     let startTime;
-    let timer = 60.0;
+    let timer = 120.0;
     let gameRunning = true;
 
     const caseData = [
@@ -90,7 +90,7 @@
 
     function resetGame() {
       score = 0;
-      timer = 60.0;
+      timer = 120.0;
       gameRunning = true;
       resetLevel();
       startTime = Date.now();
@@ -191,7 +191,7 @@
       if (!gameRunning) return;
 
       const currentTime = (Date.now() - startTime) / 1000;
-      timer = 60 - currentTime;
+      timer = 120 - currentTime;
 
       if (timer <= 0) {
         timer = 0;
